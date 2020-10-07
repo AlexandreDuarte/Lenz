@@ -17,24 +17,32 @@ Engine::Engine() {
     b_rotation = false;
     active_draw = -1;
 
-    create_points(1000, 0, 1);
+    create_points();
 
 
     glViewport(0, 0, 2000, 2000);
 
     glEnable(GL_DEBUG_OUTPUT);
 
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
     glEnable(GL_DEPTH_TEST);
+    /*glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);*/
+
+    glEnable(GL_MULTISAMPLE);
+
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
 Engine::~Engine() {
-
+    delete[] VAO;
+    delete[] VBO;
+    delete[] EBO;
+    delete camera;
+    delete &lenses;
 }
 
 void Engine::init_shader() {
-    Shader s("shaders/shader.vs", "shaders/shader.fs");
+    Shader s("shaders/shader.vs", "shaders/shader.fs", "shaders/shader.gs");
 
     camera = new Camera(s.ID, glm::dvec3(2.0, -2.0, 2.0), glm::dvec3(0.0, 0.0, 0.0), 1.0);
 
@@ -56,81 +64,107 @@ void Engine::render(double* delta_time, double zoom) {
     if (start) {
         std::cout << start << std::endl;
 
-        unsigned int* ind = new unsigned int[p_arrays.at(0)->size / 3 * 2];
-        int size = 0;
-            for (unsigned int k = 0; k < 21*2; k++) {
-                for (unsigned int i = 0; i < 21; i++) {
-
-                    *(ind + size) = i + 0 + (k) * 21;
-
-                    *(ind + size + 1) = i + (k + 1) * 21;
+        for (int render_id = 0; render_id < lenses.size(); render_id++) {
+            unsigned int* l_VAO = (VAO + render_id);
+            unsigned int* l_VBO = (VBO + render_id);
+            unsigned int* l_EBO = (EBO + render_id);
 
 
-                    size+=2;
-                }
+            glGenVertexArrays(1, l_VAO);
+            glGenBuffers(1, l_VBO);
+            glGenBuffers(1, l_EBO);
+
+
+            glBindVertexArray(*l_VAO);
+
+            glBindBuffer(GL_ARRAY_BUFFER, *l_VBO);
+            glBufferData(GL_ARRAY_BUFFER, (lenses.at(render_id))->output->size * sizeof(double), (lenses.at(render_id))->output->p_array, GL_STATIC_DRAW);
+
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *l_EBO);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, (lenses.at(render_id))->output->size * sizeof(unsigned int), (lenses.at(render_id))->output->ind, GL_STATIC_DRAW);
+
+            glVertexAttribLPointer(0, 3, GL_DOUBLE, 4 * sizeof(double), (void*)(0));
+            glEnableVertexAttribArray(0);
+
+
+            glVertexAttribLPointer(1, 1, GL_DOUBLE, 4 * sizeof(double), (void*)(3 * sizeof(double)));
+            glEnableVertexAttribArray(1);
+
+
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+            glBindVertexArray(0);
         }
-
-        glGenVertexArrays(1, &VAO);
-        glGenBuffers(1, &VBO);
-        glGenBuffers(1, &EBO);
-
-
-        glBindVertexArray(VAO);
-
-        glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferData(GL_ARRAY_BUFFER, (p_arrays.at(0))->size * sizeof(double), (*p_arrays.at(0)).p_array, GL_STATIC_DRAW);
-
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, p_arrays.at(0)->size/3 * 2 * sizeof(unsigned int), ind, GL_STATIC_DRAW);
-
-        glVertexAttribLPointer(0, 3, GL_DOUBLE, 3 * sizeof(double), (void*)(0));
-
-        glEnableVertexAttribArray(0);
-
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-        glBindVertexArray(0);
-
-        active_draw = 0;
         start = false;
     }
 
-    if (active_draw != -1) {
-        glBindVertexArray(VAO);
 
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    for (int render_id = 0; render_id < lenses.size(); render_id++) {
 
-        //glDrawArrays(GL_LINE_STRIP, 0, (*p_arrays.at(0)).size/3);
+        
+        unsigned int* l_VAO = (VAO + render_id);
+        unsigned int* l_VBO = (VBO + render_id);
+        unsigned int* l_EBO = (EBO + render_id);
 
-        //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+        glBindVertexArray(*l_VAO);
 
-        //glDrawElements(GL_TRIANGLE_STRIP, p_arrays.at(0)->size/3 * 5, GL_UNSIGNED_INT, (void*)0);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *l_EBO);
 
-        //for (int i = 0; i < 21 * sizeof(unsigned int) - 2; i++) {
+        glDrawElements(GL_TRIANGLE_STRIP, 42*40, GL_UNSIGNED_INT, (void*)(0));
 
-
-        //TODO use geometry shader to archieve separation of diferente slices of the lens face
-        for (int i = 0; i < 20; i++) {
-            glDrawElements(GL_TRIANGLE_STRIP, 42, GL_UNSIGNED_INT, (void*)(i*sizeof(unsigned int)*42));
-        }
-        for (int i = 21; i < 10 * sizeof(unsigned int) + 1; i++) {
-            glDrawElements(GL_TRIANGLE_STRIP, 42, GL_UNSIGNED_INT, (void*)(i * sizeof(unsigned int) * 42));
+        /*for (int r = 0; r < 20; r++) {
+            glDrawElements(GL_TRIANGLE_STRIP, 21, GL_UNSIGNED_INT, (void*)(42 * 4 * (2 * r)));
         }
 
+
+        for (int r = 0; r < 20; r++) {
+            glDrawElements(GL_TRIANGLE_STRIP, 21, GL_UNSIGNED_INT, (void*)(42 * 4 * (2 * r) + 21 * 4));
+        }
+
+
+        for (int r = 0; r < 20; r++) {
+            glDrawElements(GL_TRIANGLE_STRIP, 21, GL_UNSIGNED_INT, (void*)(42*4*(2*r + 1)));
+        }
+
+        for (int r = 0; r < 20; r++) {
+            glDrawElements(GL_TRIANGLE_STRIP, 21, GL_UNSIGNED_INT, (void*)(42 * 4 * (2 * r + 1) + 21 * 4));
+        }*/
         glBindVertexArray(0);
     }
+
 }
 
-void Engine::create_points(double resolution, double offset, double step) {
+void Engine::create_points() {
     
-    
-    Lenz* l = new Lenz(0.15, 0.15, 1, 0.1, 1.5);
+    Lenz* l = new ConcaveConvex();
+
+    l->initializeLenz(0.25, 0.35, 0.15, 1, 0.02, 1.5);
+
+    l->createLenzPoints();
+
+    lenses.push_back(l);
 
 
-    Lenz::points_array* a = new Lenz::points_array();
-    l->createLenzPoints(a);
+    Lenz* l2 = new ConcaveConvex();
 
-    p_arrays.push_back(a);
+    l2->initializeLenz(-0.25, -0.2, -0.1, 1, 0.05, 1.5);
+
+    l2->createLenzPoints();
+
+    lenses.push_back(l2);
+
+
+    Lenz* l1 = new Biconvex();
+
+    l1->initializeLenz(0, 0.35, 0.15, 1, 0.1, 1.5);
+
+    l1->createLenzPoints();
+
+    lenses.push_back(l1);
+
+    VAO = new unsigned int[lenses.size()];
+    VBO = new unsigned int[lenses.size()];
+    EBO = new unsigned int[lenses.size()];
 
 }
 

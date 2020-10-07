@@ -22,17 +22,17 @@ public:
 	double rotation;
 	double v_rotation;
 	bool b_rotation;
-	unsigned int VBO, VAO, EBO;
+	unsigned int *VBO, *VAO, *EBO;
 	int active_draw;
 
-	std::vector<Lenz::points_array*> p_arrays;
+	std::vector<Lenz*> lenses;
 
 public:
 	void init_shader();
 	void render(double*, double);
 
 public:
-	void create_points(double, double, double);
+	void create_points();
 	//void generate_points(Engine::points_array* ,int, int, int);
 	void processInput(GLFWwindow* window, double*);
 };
