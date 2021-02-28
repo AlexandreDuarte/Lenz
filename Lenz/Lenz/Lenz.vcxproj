@@ -150,11 +150,13 @@
     <ClCompile Include="cEngine.cpp" />
     <ClCompile Include="cLenz.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="rays.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="camera.h" />
     <ClInclude Include="cEngine.h" />
     <ClInclude Include="cLenz.h" />
+    <ClInclude Include="rays.h" />
     <ClInclude Include="shader_s.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

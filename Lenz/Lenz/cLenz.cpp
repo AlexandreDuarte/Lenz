@@ -8,6 +8,8 @@ const double pi = std::acos(-1);
 Lenz::~Lenz()
 {
 	delete lenz_param;
+	delete[] output->ind;
+	delete[] output->p_array;
 	delete output;
 }
 

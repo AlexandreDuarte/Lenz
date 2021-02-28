@@ -59,6 +59,7 @@ int main()
 
     Engine* engine = new Engine();
     engine->init_shader();
+    engine->push_to_render();
 
     static double old_time = 0.0, delta_time = 0.0, time = 0.0;
 

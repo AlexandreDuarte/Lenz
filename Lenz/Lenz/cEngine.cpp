@@ -1,13 +1,10 @@
 
-#include <future>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include "cEngine.h"
-#include <intrin.h>
-#include <limits>
 
 Engine::Engine() {
 
@@ -38,7 +35,11 @@ Engine::~Engine() {
     delete[] VBO;
     delete[] EBO;
     delete camera;
-    delete &lenses;
+    for (auto p : lenses)
+    {
+        delete p;
+    }
+    lenses.clear();
 }
 
 void Engine::init_shader() {
@@ -46,6 +47,40 @@ void Engine::init_shader() {
 
     camera = new Camera(s.ID, glm::dvec3(2.0, -2.0, 2.0), glm::dvec3(0.0, 0.0, 0.0), 1.0);
 
+}
+
+void Engine::push_to_render() {
+    for (int render_id = 0; render_id < lenses.size(); render_id++) {
+        unsigned int* l_VAO = (VAO + render_id);
+        unsigned int* l_VBO = (VBO + render_id);
+        unsigned int* l_EBO = (EBO + render_id);
+
+
+        glGenVertexArrays(1, l_VAO);
+        glGenBuffers(1, l_VBO);
+        glGenBuffers(1, l_EBO);
+
+
+        glBindVertexArray(*l_VAO);
+
+        glBindBuffer(GL_ARRAY_BUFFER, *l_VBO);
+        glBufferData(GL_ARRAY_BUFFER, (lenses.at(render_id))->output->size * sizeof(double), (lenses.at(render_id))->output->p_array, GL_STATIC_DRAW);
+
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *l_EBO);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, (lenses.at(render_id))->output->size * sizeof(unsigned int), (lenses.at(render_id))->output->ind, GL_STATIC_DRAW);
+
+        glVertexAttribLPointer(0, 3, GL_DOUBLE, 4 * sizeof(double), (void*)(0));
+        glEnableVertexAttribArray(0);
+
+
+        glVertexAttribLPointer(1, 1, GL_DOUBLE, 4 * sizeof(double), (void*)(3 * sizeof(double)));
+        glEnableVertexAttribArray(1);
+
+
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+        glBindVertexArray(0);
+    }
 }
 
 void Engine::render(double* delta_time, double zoom) {
@@ -58,45 +93,6 @@ void Engine::render(double* delta_time, double zoom) {
     camera->updateRotation(rotation, v_rotation);
 
     camera->updateZoom(zoom);
-
-
-
-    if (start) {
-        std::cout << start << std::endl;
-
-        for (int render_id = 0; render_id < lenses.size(); render_id++) {
-            unsigned int* l_VAO = (VAO + render_id);
-            unsigned int* l_VBO = (VBO + render_id);
-            unsigned int* l_EBO = (EBO + render_id);
-
-
-            glGenVertexArrays(1, l_VAO);
-            glGenBuffers(1, l_VBO);
-            glGenBuffers(1, l_EBO);
-
-
-            glBindVertexArray(*l_VAO);
-
-            glBindBuffer(GL_ARRAY_BUFFER, *l_VBO);
-            glBufferData(GL_ARRAY_BUFFER, (lenses.at(render_id))->output->size * sizeof(double), (lenses.at(render_id))->output->p_array, GL_STATIC_DRAW);
-
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *l_EBO);
-            glBufferData(GL_ELEMENT_ARRAY_BUFFER, (lenses.at(render_id))->output->size * sizeof(unsigned int), (lenses.at(render_id))->output->ind, GL_STATIC_DRAW);
-
-            glVertexAttribLPointer(0, 3, GL_DOUBLE, 4 * sizeof(double), (void*)(0));
-            glEnableVertexAttribArray(0);
-
-
-            glVertexAttribLPointer(1, 1, GL_DOUBLE, 4 * sizeof(double), (void*)(3 * sizeof(double)));
-            glEnableVertexAttribArray(1);
-
-
-            glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-            glBindVertexArray(0);
-        }
-        start = false;
-    }
 
 
     for (int render_id = 0; render_id < lenses.size(); render_id++) {
@@ -135,6 +131,24 @@ void Engine::render(double* delta_time, double zoom) {
 }
 
 void Engine::create_points() {
+
+
+    Lenz* l3 = new Biconvex();
+
+    l3->initializeLenz(-0.3, 0.2, 0.15, 1, 0.03, 1.5);
+
+    l3->createLenzPoints();
+
+    lenses.push_back(l3);
+
+
+    Lenz* l2 = new ConcaveConvex();
+
+    l2->initializeLenz(-0.15, -0.2, -0.1, 1, 0.05, 1.5);
+
+    l2->createLenzPoints();
+
+    lenses.push_back(l2);
     
     Lenz* l = new ConcaveConvex();
 
@@ -145,15 +159,6 @@ void Engine::create_points() {
     lenses.push_back(l);
 
 
-    Lenz* l2 = new ConcaveConvex();
-
-    l2->initializeLenz(-0.25, -0.2, -0.1, 1, 0.05, 1.5);
-
-    l2->createLenzPoints();
-
-    lenses.push_back(l2);
-
-
     Lenz* l1 = new Biconvex();
 
     l1->initializeLenz(0, 0.35, 0.15, 1, 0.1, 1.5);
@@ -161,6 +166,8 @@ void Engine::create_points() {
     l1->createLenzPoints();
 
     lenses.push_back(l1);
+
+
 
     VAO = new unsigned int[lenses.size()];
     VBO = new unsigned int[lenses.size()];

@@ -33,6 +33,7 @@ public:
 
 public:
 	void create_points();
+	void push_to_render();
 	//void generate_points(Engine::points_array* ,int, int, int);
 	void processInput(GLFWwindow* window, double*);
 };
